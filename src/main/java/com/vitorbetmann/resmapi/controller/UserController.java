@@ -5,12 +5,15 @@ import com.vitorbetmann.resmapi.services.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Validated
 @RestController
 @RequestMapping("/api/v1/users")
 public class UserController {
@@ -36,15 +39,15 @@ public class UserController {
     }
 
     @Operation(
-            summary = "Updates user data (excluding password).",
-            description = "Replaces the NAME, EMAIL, LOGIN, and ADDRESS of the user with the given ID. All four fields are required. Password changes go through the dedicated /{id}/password endpoint.",
+            summary = "Partially updates user data (excluding password).",
+            description = "Updates one or more of NAME, EMAIL, LOGIN, and ADDRESS for the user with the given ID. At least one field is required; omitted fields are left unchanged. Password changes go through the dedicated /{id}/password endpoint.",
             responses = {
                     @ApiResponse(description = "OK", responseCode = "200"),
                     @ApiResponse(description = "NOT FOUND — user does not exist", responseCode = "404"),
                     @ApiResponse(description = "CONFLICT — email already in use by another user", responseCode = "409")
             }
     )
-    @PutMapping("/{id}")
+    @PatchMapping("/{id}")
     public ResponseEntity<UserResponse> updateUser(@Valid @PathVariable Long id, @RequestBody UpdateUserRequest request) {
         return new ResponseEntity<>(this.userService.updateUser(id, request), HttpStatus.OK);
     }
@@ -59,7 +62,7 @@ public class UserController {
             }
     )
     @PatchMapping("/{id}/password")
-    public ResponseEntity<UserResponse> changePassword(@Valid @PathVariable Long id, @RequestBody ChangePasswordRequest request) {
+    public ResponseEntity<UserResponse> changePassword(@PathVariable Long id, @Valid @RequestBody ChangePasswordRequest request) {
         return new ResponseEntity<>(this.userService.changePassword(id, request), HttpStatus.OK);
     }
 
@@ -85,7 +88,7 @@ public class UserController {
             }
     )
     @GetMapping
-    public ResponseEntity<List<UserResponse>> findByName(@RequestParam String name) {
+    public ResponseEntity<List<UserResponse>> findByName(@RequestParam @NotBlank String name) {
         return new ResponseEntity<>(this.userService.findByName(name), HttpStatus.OK);
     }
 

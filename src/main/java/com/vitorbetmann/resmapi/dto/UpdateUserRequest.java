@@ -1,11 +1,10 @@
 package com.vitorbetmann.resmapi.dto;
 
 import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
 
 public record UpdateUserRequest(
-        @NotBlank String name,
-        @NotBlank @Email String email,
-        @NotBlank String login,
-        @NotBlank String address) {
+        String name,
+        @Email String email,
+        String login,
+        String address) {
 }

@@ -7,6 +7,7 @@ import com.vitorbetmann.resmapi.entities.User;
 import com.vitorbetmann.resmapi.exceptions.FieldAlreadyInUseException;
 import com.vitorbetmann.resmapi.exceptions.InvalidPasswordException;
 import com.vitorbetmann.resmapi.exceptions.InvalidUserTypeException;
+import com.vitorbetmann.resmapi.exceptions.NoFieldsToUpdateException;
 import com.vitorbetmann.resmapi.exceptions.UserNotFoundException;
 import com.vitorbetmann.resmapi.repositories.UserRepository;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 @Service
 public class UserService {
@@ -68,18 +70,28 @@ public class UserService {
         User user = this.userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException(id.toString()));
 
-        if (this.userRepository.findByEmailAndIdNot(request.email(), id).isPresent()) {
-            throw new FieldAlreadyInUseException("Email already in use: " + request.email());
+        boolean hasAnyField = Stream.of(request.name(), request.email(), request.login(), request.address())
+                .anyMatch(s -> s != null && !s.isBlank());
+        if (!hasAnyField) {
+            throw new NoFieldsToUpdateException("At least one field must be provided");
         }
 
-        if (this.userRepository.findByLoginAndIdNot(request.login(), id).isPresent()) {
-            throw new FieldAlreadyInUseException("Login already in use: " + request.login());
+        if (request.email() != null && !request.email().isBlank()) {
+            if (this.userRepository.findByEmailAndIdNot(request.email(), id).isPresent()) {
+                throw new FieldAlreadyInUseException("Email already in use: " + request.email());
+            }
+            user.setEmail(request.email());
         }
 
-        user.setName(request.name());
-        user.setEmail(request.email());
-        user.setLogin(request.login());
-        user.setAddress(request.address());
+        if (request.login() != null && !request.login().isBlank()) {
+            if (this.userRepository.findByLoginAndIdNot(request.login(), id).isPresent()) {
+                throw new FieldAlreadyInUseException("Login already in use: " + request.login());
+            }
+            user.setLogin(request.login());
+        }
+
+        if (request.name() != null && !request.name().isBlank()) user.setName(request.name());
+        if (request.address() != null && !request.address().isBlank()) user.setAddress(request.address());
 
         this.userRepository.save(user);
 
@@ -99,6 +111,10 @@ public class UserService {
 
         if (!user.getPassword().equals(request.oldPassword())) {
             throw new InvalidPasswordException("Invalid password");
+        }
+
+        if (user.getPassword().equals(request.newPassword())) {
+            throw new InvalidPasswordException("New password cannot be the same as current");
         }
 
         user.setPassword(request.newPassword());
